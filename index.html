@@ -254,91 +254,88 @@ Si disminuyes left, el elemento se moverá hacia la izquierda.El z-index control
 		map.addControl(bm);	  			  
 </script> -->
 
-<!-- search feature -->
+
+
+		
+
+
+
+		<-- search feature 
 <script>
-(function () {
-  // Evita múltiples suscripciones del mismo handler
-  var attached = false;
+		function searchFeatures() {
+			// Insert combo box for source choice
+			var selectElt = document.createElement('select');
+			var buttonElt = search.element.querySelector('button');
+			search.element.insertBefore(selectElt, buttonElt);
+			//// Example: Collection to merge multiple sources
+			//class sourceCollection extends ol.source.Vector {
+			//	constructor(opt) {
+			//		opt = opt || {};
+			//		super(opt);
+			//		this._sources = opt.sources;
+			//	}
+			//	getFeatures() {
+			//		var a = [];
+			//		this._sources.forEach(s => a = a.concat(s.getFeatures()));
+			//		return a;
+			//	}
+			//}
+			//// Define all source layers
+			//const combinedSource = new sourceCollection({
+			//	sources: [jsonSource_1, jsonSource_2, jsonSource_3]
+			//});
 
-  function initQuickSearch() {
-    // 1) Verifica que exista el control 'search'
-    if (typeof search === 'undefined' || !search.element) {
-      console.error('[QuickSearch] Control "search" no encontrado.');
-      return;
-    }
+			// Set options to search in different source, one at a time
+			['BARRIOS_NOMBRE', 'Option_2'].forEach(function (l) {
+			  ol.ext.element.create('OPTION', {
+				text: l,
+				parent: selectElt
+			  });
+			});
+			// For each option set data to perform the search
+			function handleComboBoxChange() {
+			  search.clearHistory();
+			  search.setInput('');
+			  isManualSearch = true;
 
-    // 2) Capa real de Barrios (global)
-    var layer = window.lyr_BARRIOSYOASENTAMIENTOURBANOS;
-    if (!layer) {
-      console.error('[QuickSearch] Capa "lyr_BARRIOSYOASENTAMIENTOURBANOS" no encontrada.');
-      return;
-    }
+			  if (selectElt.value === 'BARRIOS_NOMBRE') {
+				search.setSource(lyr_BARRIOSYOASENTAMIENTOURBANOS.getSource());
+				search.set('property', 'NOMBRE');
+				search.set('placeholder', 'Type ex; barrio madrid...');
+				if (isManualSearch) {
+					search.on('select', function(e) { lyr_BARRIOSYOASENTAMIENTOURBANOS.setVisible(true); }); //show layer when search
+				}
+				//// Example: search in a field but the list reports a sum of values ​​from the feature
+				//search.getTitle = function(f) {
+				//	var title = 'F' + f.get('FOGLIO') + ' ' + 'P' + f.get('PARTICELLA');
+				//	return title;
+				//};				
+			  } 
+			  if (selectElt.value === 'Option_2') {
+				search.setSource(jsonSource_Option2);
+				search.set('property', 'FieldName');
+				search.set('placeholder', 'Find Cod (es: F-05-0123)');
+				if (isManualSearch) {
+					search.on('select', function(e) { lyr_Option2.setVisible(true); }); //show layer when search
+				}
+			  }
+			  // Reset del placeholder nella barra di ricerca
+			  var inputField = search.element.querySelector('.ol-search input');
+			  inputField.placeholder = search.get('placeholder');
+			}
+			handleComboBoxChange();
 
-    // 3) Espera a que la capa tenga su source y features
-    function whenReady() {
-      var src = layer.getSource();
-      if (!src) {
-        // La source aún no fue asignada con setSource(...)
-        layer.once('change:source', whenReady);
-        return;
-      }
-
-      // Si no hay features todavía, espera el primer agregado
-      if (!src.getFeatures || src.getFeatures().length === 0) {
-        src.once('addfeature', whenReady);
-        src.once('change', function(){
-          if (src.getFeatures().length) whenReady();
-        });
-        return;
-      }
-
-      // 4) Configura la búsqueda sobre la CAPA (no sobre la source local)
-      search.clearHistory();
-      search.setInput('');
-      search.setLayer(layer);                       // <- clave para evitar el scope de la source
-      search.set('property', 'NOMBRE');             // <- usa EXACTAMENTE el campo del popup
-      search.set('placeholder', 'Buscar barrio (ej: Porvenir, Centro)…');
-
-      // (Opcional) cómo se muestra cada resultado
-      search.getTitle = function (f) { return f.get('NOMBRE'); };
-
-      // Evita duplicar el handler si recargas este init
-      if (!attached) {
-        search.on('select', function (e) {
-          var f = e.search || e.feature;
-          if (!f) return;
-          layer.setVisible(true);
-          try {
-            var extent = f.getGeometry().getExtent();
-            map.getView().fit(extent, { maxZoom: 17, duration: 500 });
-          } catch (err) {
-            console.warn('[QuickSearch] No se pudo encuadrar la geometría:', err);
-          }
-        });
-        attached = true;
-      }
-
-      // Actualiza placeholder visual
-      var inputField = search.element.querySelector('.ol-search input');
-      if (inputField) inputField.placeholder = search.get('placeholder');
-
-      console.log('[QuickSearch] Búsqueda lista sobre campo "NOMBRE". Features:', src.getFeatures().length);
-    }
-
-    whenReady();
-  }
-
-  // Lánzalo cuando todo esté listo
-  if (window.layersLoadedFlag) {
-    initQuickSearch();
-  } else {
-    // Si en tu plantilla disparan un evento personalizado, nos enganchamos
-    document.addEventListener('layersLoaded', initQuickSearch);
-    // Y como red de seguridad, también al cargar la página
-    window.addEventListener('load', initQuickSearch);
-  }
-})();
-</script>
+			// Change event
+			selectElt.addEventListener('change', function() {
+			  handleComboBoxChange(); 
+			});	
+		}
+		if (window.layersLoadedFlag) {
+			searchFeatures();
+		} else {
+			document.addEventListener('layersLoaded', searchFeatures);
+		}
+</script> 
 
 
 <!-- overview map -->		
@@ -452,3 +449,4 @@ Si disminuyes left, el elemento se moverá hacia la izquierda.El z-index control
 
     </body>
 </html>
+
